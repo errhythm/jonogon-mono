@@ -21,6 +21,7 @@ import {
 } from './_components/petitionSortUtils';
 import {TypeAnimation} from 'react-type-animation';
 import {trpc} from '@/trpc/client';
+import SearchBox from '@/components/custom/SearchBox';
 
 function SortOption({
     sort,
@@ -139,6 +140,7 @@ export default function Home() {
                         />
                     )}
                 </h1>
+                <SearchBox />
                 <div className="flex items-center justify-between my-2">
                     {type === 'own' ? null : (
                         <div>
