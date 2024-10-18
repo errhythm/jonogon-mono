@@ -17,6 +17,7 @@ import {
 import {
     listPetitions,
     listSuggestedPetitions,
+    searchPetitions
 } from '../procedures/petitions/listing/list-petitions.mjs';
 import {listPendingPetitionRequests} from '../procedures/petitions/listing/pending-petition-requests.mjs';
 
@@ -28,6 +29,8 @@ export const petitionRouter = router({
 
     get: getPetition,
     create: createPetition,
+
+    search: searchPetitions,
 
     update: updatePetition,
     submit: submitPetition,

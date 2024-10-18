@@ -7,6 +7,7 @@ import {deriveStatus} from '../../../../../db/model-utils/petition.mjs';
 import {sql} from 'kysely';
 import {jsonArrayFrom} from 'kysely/helpers/postgres';
 import {protectedProcedure} from '../../../middleware/protected.mjs';
+import {removeStopwords, eng, ben} from 'stopword';
 
 export const listPetitions = publicProcedure
     .input(
@@ -336,13 +337,13 @@ export const listSuggestedPetitions = protectedProcedure
                     // Calculate the weight based on matching location/target and vote count
                     sql<number>`
                         (
-                            CASE 
+                            CASE
                                 WHEN petitions.formalized_at IS NOT NULL THEN ${FORMALIZED_PETITION_WEIGHT}
-                                WHEN petitions.location = ${input.location} AND petitions.target = ${input.target} 
+                                WHEN petitions.location = ${input.location} AND petitions.target = ${input.target}
                                 THEN ${LOCATION_TARGET_WEIGHT * 2}
-                                WHEN petitions.location = ${input.location} OR petitions.target = ${input.target} 
-                                THEN ${LOCATION_TARGET_WEIGHT} 
-                                ELSE 0 
+                                WHEN petitions.location = ${input.location} OR petitions.target = ${input.target}
+                                THEN ${LOCATION_TARGET_WEIGHT}
+                                ELSE 0
                             END
                             + ${TRENDING_VOTES_WEIGHT} * COUNT(petition_votes.id)
                         )
@@ -394,3 +395,49 @@ export const listSuggestedPetitions = protectedProcedure
             });
         }
     });
+
+export const searchPetitions = publicProcedure
+  .input(
+    z.object({
+      query: z.string().min(5),
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    const keywords = [...new Set(removeStopwords(
+      input.query.toLowerCase().split(' '),
+      [...eng, ...ben]
+    ).filter((word) => word.length > 2))];
+
+    if (keywords.length < 2) {
+      return { data: [] };
+    }
+
+    const searchResults = await ctx.services.postgresQueryBuilder
+      .selectFrom('petitions')
+      .select([
+        'petitions.id',
+        'petitions.title',
+        'petitions.target',
+        'petitions.created_at'
+      ])
+      .select(ctx.services.postgresQueryBuilder.fn.count('petition_votes.id').as('petition_upvote_count'))
+      .leftJoin('petition_votes', 'petitions.id', 'petition_votes.petition_id')
+      .where('petitions.deleted_at', 'is', null)
+      .where('petitions.approved_at', 'is not', null)
+      .where((eb) =>
+        eb.or(
+          keywords.map(keyword =>
+            eb.or([
+              eb('petitions.title', 'ilike', `%${keyword}%`),
+              eb('petitions.target', 'ilike', `%${keyword}%`),
+              eb('petitions.location', 'ilike', `%${keyword}%`),
+            ])
+          )
+        )
+      )
+      .groupBy('petitions.id')
+      .orderBy('petition_upvote_count', 'desc')
+      .execute();
+
+    return { data: searchResults };
+  });

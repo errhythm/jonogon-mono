@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import {RxCaretSort, RxCheck} from 'react-icons/rx';
-import {PropsWithChildren} from 'react';
+import {useState, PropsWithChildren} from 'react';
 import {useRouter, useSearchParams} from 'next/navigation';
 import {cn} from '@/lib/utils';
 import PetitionList from '@/app/_components/PetitionList';
@@ -22,6 +22,7 @@ import {
 import {TypeAnimation} from 'react-type-animation';
 import {trpc} from '@/trpc/client';
 import SearchBox from '@/components/custom/SearchBox';
+import PetitionCard from '@/app/_components/PetitionCard';
 
 function SortOption({
     sort,
@@ -88,6 +89,7 @@ const DISCORD_COMMUNITY_SIZE = 2500;
 
 export default function Home() {
     const params = useSearchParams();
+    const [searchResults, setSearchResults] = useState<any[]>([]);
 
     const type = getDabiType(params.get('type'));
     const sort = getDefaultSortForDabiType(
@@ -140,7 +142,7 @@ export default function Home() {
                         />
                     )}
                 </h1>
-                <SearchBox />
+                <SearchBox setSearchResults={setSearchResults} />
                 <div className="flex items-center justify-between my-2">
                     {type === 'own' ? null : (
                         <div>
@@ -163,7 +165,28 @@ export default function Home() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <PetitionList />
+                {searchResults.length > 0 ? (
+                    <div className="flex flex-col gap-4">
+                        {searchResults.map((petition) => (
+                            <PetitionCard
+                                key={petition.id}
+                                id={petition.id}
+                                userVote={petition.extras?.user_vote}
+                                mode={type}
+                                name={petition.extras?.user?.name ?? ''}
+                                title={petition.title ?? 'Untitled Petition'}
+                                date={new Date(petition.created_at ?? '1970-01-01')}
+                                target={petition.target ?? 'Some Ministry'}
+                                upvotes={Number(petition.petition_upvote_count) ?? 0}
+                                downvotes={0} // We don't have this information from the search query
+                                comments={0} // We don't have this information from the search query
+                                upvoteTarget={0} // We don't have this information from the search query
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <PetitionList />
+                )}
             </div>
             <div className="fixed bottom-0 left-0 w-full bg-background/50">
                 <div
