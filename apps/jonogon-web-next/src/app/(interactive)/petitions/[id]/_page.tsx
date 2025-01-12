@@ -8,7 +8,7 @@ import {ImageCarousel} from '@/app/(interactive)/petitions/[id]/_components/Imag
 import {useAuthState} from '@/auth/token-manager';
 import {Button} from '@/components/ui/button';
 import {trpc} from '@/trpc/client';
-import {Share2} from 'lucide-react';
+import {Share2, ThumbsDown, ThumbsUp, MessageSquare} from 'lucide-react';
 import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import Markdown from 'react-markdown';
@@ -18,7 +18,6 @@ import {useSocialShareStore} from '@/store/useSocialShareStore';
 import {PetitionShareModal} from './_components/PetitionShareModal';
 import {SocialShareSheet} from './_components/SocialShareSheet';
 
-import {ThumbsDown, ThumbsUp} from 'lucide-react';
 import CommentThread from './_components/comments/Thread';
 import SuggestedPetitions from './_components/SuggestedPetitions';
 
@@ -43,6 +42,10 @@ export default function Petition() {
         isLoading,
     } = trpc.petitions.get.useQuery({
         id: petition_id!!,
+    });
+
+    const {data: commentCount} = trpc.comments.totalCount.useQuery({
+        petition_id: petition_id,
     });
 
     const {openShareModal} = useSocialShareStore();
@@ -548,6 +551,28 @@ export default function Petition() {
                             }
                         />{' '}
                         <p className="ml-2">{downvoteCount}</p>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="flex items-center gap-2 text-stone-800"
+                        onClick={() => {
+                            const commentSection =
+                                document.getElementById('comments');
+                            if (commentSection) {
+                                commentSection.scrollIntoView({
+                                    behavior: 'smooth',
+                                });
+                            }
+                        }}>
+                        <MessageSquare size={20} />
+                        <span>{commentCount?.data?.count ?? 0}</span>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="flex items-center gap-2 text-stone-800"
+                        onClick={() => openShareModal()}>
+                        <Share2 size={18} />
+                        <span>Share</span>
                     </Button>
                 </div>
 
